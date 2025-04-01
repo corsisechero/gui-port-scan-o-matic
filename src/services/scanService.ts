@@ -1,6 +1,6 @@
-
 import { ScanOptions } from '@/components/ScanForm';
 import { ScanResult, PortData } from '@/components/ResultsDisplay';
+import { toast } from '@/components/ui/use-toast';
 
 // Try to connect to the local backend, fallback to mock data if not available
 export const scanTarget = async (
@@ -25,10 +25,24 @@ export const scanTarget = async (
 
   // If backend is available, use it
   if (isBackendAvailable) {
-    return scanWithBackend(target, scanType, options, progressCallback);
+    try {
+      return await scanWithBackend(target, scanType, options, progressCallback);
+    } catch (error) {
+      console.error('Error with backend scan:', error);
+      // Only fall back to mock data if explicitly requested
+      if (window.confirm('Backend scan failed. Would you like to run a simulated scan instead?')) {
+        return scanWithMockData(target, scanType, options, progressCallback);
+      } else {
+        throw new Error('Scan failed. Please check if the target exists and is reachable.');
+      }
+    }
   } else {
-    // Fallback to mock data
-    return scanWithMockData(target, scanType, options, progressCallback);
+    // Fallback to mock data with user confirmation
+    if (window.confirm('Backend not available. Would you like to run a simulated scan instead? Note: This will generate fake data and may not reflect actual network status.')) {
+      return scanWithMockData(target, scanType, options, progressCallback);
+    } else {
+      throw new Error('Backend is required for actual network scanning. Please start the backend server.');
+    }
   }
 };
 
@@ -80,15 +94,22 @@ const scanWithBackend = async (
       throw new Error('Failed to get scan results');
     }
     
-    return await resultsResponse.json();
+    const results = await resultsResponse.json();
+    
+    // Verify that the host is actually up
+    if (results.hostInfo?.status !== 'up' || results.ports.length === 0) {
+      results.hostInfo.status = 'down';
+      results.ports = [];
+    }
+    
+    return results;
   } catch (error) {
     console.error('Error during scan:', error);
-    // If an error occurs during the real scan, fall back to mock data
-    return scanWithMockData(target, scanType, options, progressCallback);
+    throw error; // Re-throw the error to be handled by the parent function
   }
 };
 
-// This is the original mock data function
+// This is the mock data function
 const scanWithMockData = async (
   target: string,
   scanType: string,
@@ -104,13 +125,13 @@ const scanWithMockData = async (
     progressCallback(i);
   }
   
-  // This is mock data - in a real app, this would be the result of an actual scan
+  // Add a clear indicator that this is mock data
   const now = new Date();
   const mockPortResults: PortData[] = generateMockPorts(scanType, options);
   
   return {
     target,
-    timestamp: now.toLocaleString(),
+    timestamp: now.toLocaleString() + " (SIMULATED DATA)",
     scanType,
     ports: mockPortResults,
     hostInfo: {
@@ -120,7 +141,8 @@ const scanWithMockData = async (
       hostnames: ['localhost', target],
       os: 'Linux 5.10.x',
     },
-    rawOutput: generateMockRawOutput(target, mockPortResults),
+    rawOutput: "This is simulated data and does not represent actual network status.\n\n" + 
+               generateMockRawOutput(target, mockPortResults),
   };
 };
 
