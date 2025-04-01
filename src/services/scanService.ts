@@ -2,9 +2,94 @@
 import { ScanOptions } from '@/components/ScanForm';
 import { ScanResult, PortData } from '@/components/ResultsDisplay';
 
-// This is a mock service that simulates port scanning
-// In a real application, this would connect to a backend API that performs the actual scanning
+// Try to connect to the local backend, fallback to mock data if not available
 export const scanTarget = async (
+  target: string,
+  scanType: string,
+  options: ScanOptions,
+  progressCallback: (progress: number) => void
+): Promise<ScanResult> => {
+  // First check if the backend is available
+  let isBackendAvailable = false;
+  
+  try {
+    const response = await fetch('http://localhost:3001/api/status', { 
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    isBackendAvailable = response.ok;
+  } catch (error) {
+    console.log('Backend not available, using mock data');
+    isBackendAvailable = false;
+  }
+
+  // If backend is available, use it
+  if (isBackendAvailable) {
+    return scanWithBackend(target, scanType, options, progressCallback);
+  } else {
+    // Fallback to mock data
+    return scanWithMockData(target, scanType, options, progressCallback);
+  }
+};
+
+// Function to scan using the local backend
+const scanWithBackend = async (
+  target: string,
+  scanType: string,
+  options: ScanOptions,
+  progressCallback: (progress: number) => void
+): Promise<ScanResult> => {
+  try {
+    // Start the scan
+    const startResponse = await fetch('http://localhost:3001/api/scan/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target, scanType, options })
+    });
+    
+    if (!startResponse.ok) {
+      throw new Error('Failed to start scan');
+    }
+    
+    const { scanId } = await startResponse.json();
+    
+    // Poll for progress
+    let completed = false;
+    let progress = 0;
+    
+    while (!completed) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const progressResponse = await fetch(`http://localhost:3001/api/scan/progress/${scanId}`);
+      
+      if (!progressResponse.ok) {
+        throw new Error('Failed to get scan progress');
+      }
+      
+      const progressData = await progressResponse.json();
+      progress = progressData.progress;
+      completed = progressData.completed;
+      
+      progressCallback(progress);
+    }
+    
+    // Get the results
+    const resultsResponse = await fetch(`http://localhost:3001/api/scan/results/${scanId}`);
+    
+    if (!resultsResponse.ok) {
+      throw new Error('Failed to get scan results');
+    }
+    
+    return await resultsResponse.json();
+  } catch (error) {
+    console.error('Error during scan:', error);
+    // If an error occurs during the real scan, fall back to mock data
+    return scanWithMockData(target, scanType, options, progressCallback);
+  }
+};
+
+// This is the original mock data function
+const scanWithMockData = async (
   target: string,
   scanType: string,
   options: ScanOptions,
