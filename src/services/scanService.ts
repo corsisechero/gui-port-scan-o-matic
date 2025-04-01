@@ -95,13 +95,10 @@ const scanWithBackend = async (
     }
     
     const results = await resultsResponse.json();
+    console.log('Scan results from backend:', results);
     
-    // Verify that the host is actually up
-    if (results.hostInfo?.status !== 'up' || results.ports.length === 0) {
-      results.hostInfo.status = 'down';
-      results.ports = [];
-    }
-    
+    // Remove the verification that forced host to be down if no ports found
+    // Trust the backend's assessment of host status
     return results;
   } catch (error) {
     console.error('Error during scan:', error);

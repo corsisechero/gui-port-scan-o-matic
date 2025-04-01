@@ -167,7 +167,29 @@ function simulateProgress(scanId) {
 // Helper function to format nmap results to match frontend expected structure
 function formatScanResults(data, target, scanType) {
   const now = new Date();
+  
+  // If no data or empty array, return host is down
+  if (!data || data.length === 0) {
+    return {
+      target,
+      timestamp: now.toLocaleString(),
+      scanType,
+      ports: [],
+      hostInfo: {
+        status: 'down',
+        latency: 0,
+        hostnames: [target],
+        os: 'Unknown',
+      },
+      rawOutput: 'No scan results available.',
+    };
+  }
+  
   const host = data[0] || {};
+  
+  // Fix: Consider the host as up even if it doesn't have open ports
+  // node-nmap will only return hosts that are up
+  const isHostUp = true; // If host is in results, it's up
   
   // Extract ports
   const ports = [];
@@ -190,7 +212,7 @@ function formatScanResults(data, target, scanType) {
     scanType,
     ports,
     hostInfo: {
-      status: host.status || 'unknown',
+      status: isHostUp ? 'up' : 'down',
       latency: host.rtt || 0,
       macAddress: host.mac || undefined,
       hostnames: host.hostname ? [host.hostname] : [target],
@@ -198,6 +220,8 @@ function formatScanResults(data, target, scanType) {
     },
     rawOutput: host.commandOutputString || '',
   };
+  
+  console.log(`Formatting results for ${target}. Host status: ${result.hostInfo.status}, Open ports: ${result.ports.length}`);
   
   return result;
 }
