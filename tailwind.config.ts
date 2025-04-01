@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				cyber: {
+					dark: '#121212',
+					darker: '#0a0a0a',
+					light: '#1e1e1e',
+					blue: '#0ea5e9',
+					cyan: '#22d3ee',
+					green: '#22c55e',
+					red: '#ef4444',
+					yellow: '#eab308',
 				}
 			},
 			borderRadius: {
@@ -84,12 +95,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-glow': {
+					'0%, 100%': { 
+						opacity: '1',
+						boxShadow: '0 0 5px theme("colors.cyber.blue"), 0 0 10px theme("colors.cyber.blue")'
+					},
+					'50%': { 
+						opacity: '0.7',
+						boxShadow: '0 0 20px theme("colors.cyber.blue"), 0 0 30px theme("colors.cyber.blue")'
+					},
+				},
+				'scanning': {
+					'0%': { width: '0%' },
+					'100%': { width: '100%' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-glow': 'pulse-glow 2s infinite',
+				'scanning': 'scanning 3s ease-in-out infinite'
+			},
+			fontFamily: {
+				mono: ['JetBrains Mono', 'monospace'],
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
